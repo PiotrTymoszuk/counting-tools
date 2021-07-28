@@ -2,11 +2,13 @@
 # And calculating the characteristic of numeric variables
 
 
-# libraries
+# libraries -----
 
   require(plyr)
   require(tidyverse)
   require(stringi)
+  require(ggsignif)
+  require(ggpubr)
   
 # functions for factors -------
 
@@ -434,9 +436,9 @@
     
   }
   
-# plotting analysis results ------
+# plotting analysis results, pairwise comparison and range plotting ------
   
-  plot_analysis_factor <- function(analysis_obj, signif_digits = 3, 
+  plot_analysis_factor <- function(analysis_object, signif_digits = 3, 
                                    label = NULL, 
                                    y_lab = '% complete answers', legend_title = NULL, 
                                    labeller = NULL, fill_colors = NULL, pie = T, 
@@ -446,27 +448,27 @@
     
     ## plot subtitle and tag
     
-    plot_subtitle <- ifelse(analysis_obj$summary$p_value < 0.05, 
-                            paste('p =', signif(analysis_obj$summary$p_value, 2)), 
+    plot_subtitle <- ifelse(analysis_object$summary$p_value < 0.05, 
+                            paste('p =', signif(analysis_object$summary$p_value, 2)), 
                             'ns')
     
     if(!is.null(labeller)) {
       
-      analysis_obj$stat_tables <- analysis_obj$stat_tables %>% 
-        set_names(labeller[names(analysis_obj$stat_tables)])
+      analysis_object$stat_tables <- analysis_object$stat_tables %>% 
+        set_names(labeller[names(analysis_object$stat_tables)])
       
     }
     
-    plot_tag <- analysis_obj$stat_tables %>% 
+    plot_tag <- analysis_object$stat_tables %>% 
       map2_chr(., names(.), function(x, y) paste(y, ': n = ', x$total_n[1])) %>% 
       paste(collapse = ', ') %>% 
       paste('\n', .)
     
     ## plotting table
     
-    plotting_tbl <- analysis_obj$stat_tables %>% 
+    plotting_tbl <- analysis_object$stat_tables %>% 
       map(arrange, 
-          desc(.data[[analysis_obj$variable]])) %>% 
+          desc(.data[[analysis_object$variable]])) %>% 
       map(mutate, 
           plot_lab = if(!pie) signif(percent, signif_digits) else paste(signif(percent, signif_digits), '%', sep = ''), 
           plot_y = cumsum(percent) - 0.5*percent)
@@ -492,7 +494,7 @@
       analysis_plot <- plotting_tbl %>% 
         ggplot(aes(x = '', 
                    y = percent, 
-                   fill = .data[[analysis_obj$variable]])) + 
+                   fill = .data[[analysis_object$variable]])) + 
         geom_bar(color = 'black', 
                  stat = 'identity') + 
         geom_label_repel(aes(label = plot_lab, 
@@ -531,7 +533,7 @@
       analysis_plot <- plotting_tbl %>% 
         ggplot(aes(x = split_var, 
                    y = percent, 
-                   fill = .data[[analysis_obj$variable]])) + 
+                   fill = .data[[analysis_object$variable]])) + 
         geom_bar(color = 'black', 
                  stat = 'identity') + 
         geom_label(aes(label = plot_lab, 
@@ -572,9 +574,9 @@
     
   }
   
-  plot_analysis_numeric <- function(analysis_obj, signif_digits = 3, 
+  plot_analysis_numeric <- function(analysis_object, signif_digits = 3, 
                                     label = NULL, 
-                                    y_lab = analysis_obj$variable, 
+                                    y_lab = analysis_object$variable, 
                                     x_lab = NULL, 
                                     legend_title = NULL, 
                                     labeller = NULL, fill_colors = NULL, violin = F, 
@@ -584,19 +586,19 @@
     
     ## plot subtitle and tag
     
-    if(analysis_obj$split_level_no == 2) {
+    if(analysis_object$split_level_no == 2) {
       
-      plot_subtitle <- ifelse(any(analysis_obj$summary$p_value < 0.05), 
-                              paste('pT =', signif(analysis_obj$summary$p_value[1], 2), 
-                                    ', pU = ', signif(analysis_obj$summary$p_value[2], 2), 
+      plot_subtitle <- ifelse(any(analysis_object$summary$p_value < 0.05), 
+                              paste('pT =', signif(analysis_object$summary$p_value[1], 2), 
+                                    ', pU = ', signif(analysis_object$summary$p_value[2], 2), 
                                     sep = ''), 
                               'ns')
       
     } else {
       
-      plot_subtitle <- ifelse(any(analysis_obj$summary$p_value < 0.05), 
-                              paste('pANOVA =', signif(analysis_obj$summary$p_value[1], 2), 
-                                    ', pK-W = ', signif(analysis_obj$summary$p_value[2], 2), 
+      plot_subtitle <- ifelse(any(analysis_object$summary$p_value < 0.05), 
+                              paste('pANOVA =', signif(analysis_object$summary$p_value[1], 2), 
+                                    ', pK-W = ', signif(analysis_object$summary$p_value[2], 2), 
                                     sep = ''), 
                               'ns')
       
@@ -606,29 +608,29 @@
     
     if(!is.null(labeller)) {
       
-      analysis_obj$stat_tables <- analysis_obj$stat_tables %>% 
-        set_names(labeller[names(analysis_obj$stat_tables)])
+      analysis_object$stat_tables <- analysis_object$stat_tables %>% 
+        set_names(labeller[names(analysis_object$stat_tables)])
       
     }
     
-    plot_tag <- analysis_obj$stat_tables %>% 
+    plot_tag <- analysis_object$stat_tables %>% 
       map2_chr(., names(.), function(x, y) paste(y, ': n = ', x$n_complete[1])) %>% 
       paste(collapse = ', ') %>% 
       paste('\n', .)
     
     ## summary table
     
-    split_var <- names(analysis_obj$mod_frame)[2]
+    split_var <- names(analysis_object$mod_frame)[2]
     
     if(!is.null(labeller)) {
       
-      analysis_obj$mod_frame[[2]] <- factor(labeller[analysis_obj$mod_frame[[2]]], 
-                                            levels = labeller[levels(analysis_obj$mod_frame[[2]])])
+      analysis_object$mod_frame[[2]] <- factor(labeller[analysis_object$mod_frame[[2]]], 
+                                            levels = labeller[levels(analysis_object$mod_frame[[2]])])
       
       
     }
     
-    summ_tbl <- analysis_obj$stat_tables %>% 
+    summ_tbl <- analysis_object$stat_tables %>% 
       map2_dfr(., names(.), 
                function(x, y) mutate(x, strata = y)) %>% 
       select(strata, 
@@ -642,9 +644,9 @@
     
     ## plotting
     
-    analysis_plot <- analysis_obj$mod_frame %>% 
+    analysis_plot <- analysis_object$mod_frame %>% 
       ggplot(aes(x = .data[[split_var]], 
-                 y = .data[[analysis_obj$variable]], 
+                 y = .data[[analysis_object$variable]], 
                  fill = .data[[split_var]])) + 
       scale_y_continuous(trans = y_transf)
     
@@ -718,7 +720,7 @@
       } else {
         
         analysis_plot <- analysis_plot + 
-          scale_fill_manual(values = rep(fill_colors, analysis_obj$split_level_no) %>% 
+          scale_fill_manual(values = rep(fill_colors, analysis_object$split_level_no) %>% 
                               unname) +
           guides(fill = F) ## to overcome the fill esthetics
         
@@ -730,9 +732,9 @@
     
   }
   
-  plot_analysis <- function(analysis_obj, signif_digits = 3, 
+  plot_analysis <- function(analysis_object, signif_digits = 3, 
                             label = NULL, 
-                            y_lab = analysis_obj$variable, 
+                            y_lab = analysis_object$variable, 
                             x_lab = NULL, 
                             legend_title = NULL, 
                             labeller = NULL, fill_colors = NULL, cust_theme = NULL, ...) {
@@ -752,9 +754,9 @@
       
     }
     
-    if(analysis_obj$var_class == 'numeric') {
+    if(analysis_object$var_class == 'numeric') {
       
-      return(plot_analysis_numeric(analysis_obj = analysis_obj, 
+      return(plot_analysis_numeric(analysis_object = analysis_object, 
                                    signif_digits = signif_digits, 
                                    label = label, 
                                    y_lab = y_lab, 
@@ -766,7 +768,7 @@
       
     } else {
       
-      return(plot_analysis_factor(analysis_obj = analysis_obj, 
+      return(plot_analysis_factor(analysis_object = analysis_object, 
                                   signif_digits = signif_digits, 
                                   label = label, 
                                   y_lab = y_lab, 
@@ -779,16 +781,61 @@
     
   }
   
+  add_parirwise_test <- function(plot, method = 'wilcox.test', p.adjust.method = 'holm', digits = 2) {
+    
+    ## adds the p values for post-Hoc test to a plot comparing CoV severities
+    
+    ## adjusted p value computation
+    
+    plot_vars <- plot$data %>% 
+      names
+    
+    tst_formula <- paste(plot_vars[1], 
+                         plot_vars[2], sep = '~') %>% 
+      as.formula
+    
+    p_val_tbl <- compare_means(tst_formula, 
+                               data = plot$data) %>% 
+      mutate(p_lab = ifelse(p.adj >= 0.05, 'ns', as.character(signif(p.adj, digits))))
+    
+    ## updating the plot
+    
+    upd_plot <- plot  +   
+      geom_signif(comparisons = list(c('healthy', 'moderate'), 
+                                     c('healthy', 'severe'), 
+                                     c('moderate', 'severe')), 
+                  step_increase = 0.1, 
+                  textsize = 2.6, 
+                  annotations = p_val_tbl$p_lab, 
+                  tip_length = 0)
+    
+    return(upd_plot)
+    
+  }
+  
+  add_norm_range <- function(plot, lower_limit, upper_limit) {
+    
+    ## adds the upper and lower limit of the laboratory paramater to the plot
+    
+    return(plot +
+             geom_hline(yintercept = lower_limit, 
+                        linetype = 'dashed', 
+                        color = 'steelblue3') + 
+             geom_hline(yintercept = upper_limit, 
+                        linetype = 'dashed', 
+                        color = 'steelblue3'))
+    
+  }
   
 # making a summary table -----
   
-  get_feature_summary <- function(analysis_obj, label = NA, signif_digits = 3) {
+  get_feature_summary <- function(analysis_object, label = NA, signif_digits = 3) {
     
     ## makes a table with cohort characteristics which may be used in your paper
     
-    if(class(analysis_obj) == 'list') {
+    if(class(analysis_object) == 'list') {
       
-      summary_tbl <- list(analysis_obj = analysis_obj, 
+      summary_tbl <- list(analysis_object = analysis_object, 
                           label = label) %>% 
         pmap_dfr(get_feature_summary, 
                  signif_digits = signif_digits)
@@ -797,9 +844,9 @@
       
     }
     
-    if(analysis_obj$var_class == 'numeric') {
+    if(analysis_object$var_class == 'numeric') {
       
-      desc_stats <- analysis_obj$stat_tables %>% 
+      desc_stats <- analysis_object$stat_tables %>% 
         map(mutate, 
             mean_cell = paste('mean(SD) = ', 
                               signif(mean, signif_digits), 
@@ -813,7 +860,7 @@
                                 ' - ', 
                                 signif(perc75, signif_digits), 
                                 ')', sep = ''), 
-            min_max_cell = paste('Min, max = ', 
+            min_max_cell = paste('Range = ', 
                                  signif(min, signif_digits), 
                                  ' - ', 
                                  signif(max, signif_digits), 
@@ -825,18 +872,18 @@
                                    n_complete), 
                              sep = '\n'))
       
-      tbl_record <- tibble(variable = analysis_obj$variable, 
+      tbl_record <- tibble(variable = analysis_object$variable, 
                            label = label, 
-                           class = analysis_obj$var_class, 
+                           class = analysis_object$var_class, 
                            strata1 = desc_stats[[1]]$tbl_cell, 
                            strata2 = desc_stats[[2]]$tbl_cell, 
-                           p_T = analysis_obj$summary$p_value[1], 
-                           p_U = analysis_obj$summary$p_value[2], 
+                           p_T = analysis_object$summary$p_value[1], 
+                           p_U = analysis_object$summary$p_value[2], 
                            p_chi = NA)
       
     } else {
       
-      desc_stats <- analysis_obj$stat_tables %>% 
+      desc_stats <- analysis_object$stat_tables %>% 
         map(function(x) list(strata = x[[1]], 
                              percent = x[[3]], 
                              number = x[[2]]) %>% 
@@ -849,14 +896,14 @@
               paste(collapse = '\n') %>% 
               paste('\nncomplete =', x[[4]][1]))
       
-      tbl_record <- tibble(variable = analysis_obj$variable, 
+      tbl_record <- tibble(variable = analysis_object$variable, 
                            label = label, 
-                           class = analysis_obj$var_class, 
+                           class = analysis_object$var_class, 
                            strata1 = desc_stats[[1]], 
                            strata2 = desc_stats[[2]], 
                            p_T = NA, 
                            p_U = NA, 
-                           p_chi = analysis_obj$summary$p_value[1])
+                           p_chi = analysis_object$summary$p_value[1])
       
     }
     
@@ -911,6 +958,67 @@
     
     
     return(analysis_object$assumptions)
+    
+  }
+  
+# Markdown and LATEX extraction/formatting tools ------
+  
+  format_line <- function(inp_tbl) {
+    
+    ## formats the given table to include percent marks and new lines
+    
+    require(kableExtra)
+    
+    new_tbl <- inp_tbl %>% 
+      map_dfc(stri_replace_all, 
+              fixed = '%', 
+              replacement = '\\%') %>% 
+      map_dfc(stri_replace_all, 
+              fixed = 'chi', 
+              replacement = '$\\chi^2$') %>% 
+      map_dfc(stri_replace_all, 
+              fixed = 'Chi', 
+              replacement = '$\\chi^2$') %>% 
+      map_dfc(stri_replace_all, 
+              fixed = 'Delta', 
+              replacement = '$\\Delta$') %>% 
+      map_dfc(linebreak)
+    
+    return(new_tbl)
+    
+  }
+  
+  extract_median <- function(analysis_object, split_var_level, signif_digits = 3) {
+    
+    ## extracts median with IQR and returns a ready to paste string
+    
+    count_tbl <- analysis_object %>% 
+      extract_counts %>% 
+      filter(split_var == split_var_level) %>% 
+      select(median, perc25, perc75) %>% 
+      map(signif, 
+          digits = signif_digits)
+    
+    return(paste(count_tbl$median, 
+                 ' [IQR: ', 
+                 count_tbl$perc25, 
+                 ' - ', 
+                 count_tbl$perc75, 
+                 ']', sep = ''))
+    
+  }
+  
+  extract_p <- function(analysis_object, test_type = 'u', signif_digits = 2) {
+    
+    ## extracts p value from the analysis and returns a ready-to-paste string
+    
+    p_value <- analysis_object %>% 
+      extract_test_summary %>% 
+      filter(test == test_type) %>% 
+      .$p_value
+    
+    return(paste('p =', 
+                 signif(p_value, signif_digits)))
     
   }
   
