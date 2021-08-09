@@ -440,7 +440,7 @@
   
   plot_analysis_factor <- function(analysis_object, signif_digits = 3, 
                                    label = NULL, 
-                                   y_lab = '% complete answers', legend_title = NULL, 
+                                   y_lab = '% complete answers', x_lab = NULL, legend_title = NULL, 
                                    labeller = NULL, fill_colors = NULL, pie = T, 
                                    cust_theme = NULL) {
     
@@ -772,6 +772,7 @@
                                   signif_digits = signif_digits, 
                                   label = label, 
                                   y_lab = y_lab, 
+                                  x_lab = x_lab, 
                                   legend_title = legend_title, 
                                   labeller = labeller, 
                                   fill_colors = fill_colors, 
@@ -860,7 +861,7 @@
                                 ' - ', 
                                 signif(perc75, signif_digits), 
                                 ')', sep = ''), 
-            min_max_cell = paste('Range = ', 
+            min_max_cell = paste('range = ', 
                                  signif(min, signif_digits), 
                                  ' - ', 
                                  signif(max, signif_digits), 
