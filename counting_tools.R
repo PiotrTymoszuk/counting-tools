@@ -372,11 +372,8 @@
             function(x) count_feature(inp_tbl = x, 
                                       var_to_count = variable, 
                                       remove_na = T, 
-                                      .drop = F)) #%>% 
-     # map(count_feature, 
-         # var_to_count = variable, 
-         # .drop = F)
-    
+                                      .drop = F))
+            
     ## testing
     
     test <- stat_tbls %>% 
