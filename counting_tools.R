@@ -26,9 +26,10 @@
     
   }
 
-  count_feature <- function(inp_tbl, var_to_count, remove_na = T) {
+  count_feature <- function(inp_tbl, var_to_count, remove_na = T, .drop = T) {
     
     ## calculates the percentage and number of participants with/without the given feature
+    ## the .drop argument specifies if the empty factor levels will be included in the output
     
     if(remove_na) {
       
@@ -43,7 +44,8 @@
     }
     
     feature_counts <- count_tbl %>% 
-      count(.data[[var_to_count]]) %>% 
+      count(.data[[var_to_count]], 
+            .drop = .drop) %>% 
       mutate(percent = n/sum(n) * 100, 
              total_n = sum(n))
     
@@ -361,14 +363,19 @@
     
     ## mod frame saved as NULL
     
-    mod_frame = NULL
+    mod_frame <- NULL
     
     ## descriptive statistics
     
     stat_tbls <- inp_tbl %>% 
       dlply(split_var, 
-            count_feature, 
-            var_to_count = variable)
+            function(x) count_feature(inp_tbl = x, 
+                                      var_to_count = variable, 
+                                      remove_na = T, 
+                                      .drop = F)) #%>% 
+     # map(count_feature, 
+         # var_to_count = variable, 
+         # .drop = F)
     
     ## testing
     
@@ -579,8 +586,14 @@
                                     y_lab = analysis_object$variable, 
                                     x_lab = NULL, 
                                     legend_title = NULL, 
-                                    labeller = NULL, fill_colors = NULL, violin = F, 
-                                    cust_theme = NULL, point_alpha = 0.3, y_transf = 'identity') {
+                                    labeller = NULL, 
+                                    fill_colors = NULL, 
+                                    violin = F, 
+                                    cust_theme = NULL, 
+                                    show_points = T, 
+                                    box_alpha = 0.25, 
+                                    point_alpha = 0.3, 
+                                    y_transf = 'identity') {
     
     ## makes a box or violin plot based on the analysis object
     
@@ -653,13 +666,13 @@
     if(violin) {
       
       analysis_plot <- analysis_plot + 
-        geom_violin(alpha = 0.25, 
+        geom_violin(alpha = box_alpha, 
                     show.legend = F)
       
     } else {
       
       analysis_plot <- analysis_plot  + 
-        geom_boxplot(alpha = 0.25, 
+        geom_boxplot(alpha = box_alpha, 
                      outlier.color = NA, 
                      show.legend = F)
       
@@ -675,21 +688,17 @@
       
     }
     
-    analysis_plot <- analysis_plot + 
-      geom_point(size = 2, 
-                 shape = 21, 
-                 color = 'black', 
-                 alpha = point_alpha, 
-                 position = position_jitter(width = 0.15, 
-                                            height = 0.1)) + 
-      plot_theme + 
-      theme(plot.tag.position = 'bottom') + 
-      labs(title = label, 
-           subtitle = plot_subtitle, 
-           tag = plot_tag, 
-           y = y_lab, 
-           fill = legend_title, 
-           x = x_lab)
+    if(show_points) {
+      
+      analysis_plot <- analysis_plot + 
+        geom_point(size = 2, 
+                   shape = 21, 
+                   color = 'black', 
+                   alpha = point_alpha, 
+                   position = position_jitter(width = 0.15, 
+                                              height = 0.1))
+      
+    }
     
     if(violin) {
       
@@ -727,6 +736,16 @@
       }
       
     }
+    
+    analysis_plot <- analysis_plot + 
+      plot_theme + 
+      theme(plot.tag.position = 'bottom') + 
+      labs(title = label, 
+           subtitle = plot_subtitle, 
+           tag = plot_tag, 
+           y = y_lab, 
+           fill = legend_title, 
+           x = x_lab)
     
     return(analysis_plot)
     
