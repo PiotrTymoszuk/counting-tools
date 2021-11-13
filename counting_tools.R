@@ -372,17 +372,15 @@
             function(x) count_feature(inp_tbl = x, 
                                       var_to_count = variable, 
                                       remove_na = T, 
-                                      .drop = F))
-            
+                                      .drop = F)) #%>% 
+     # map(count_feature, 
+         # var_to_count = variable, 
+         # .drop = F)
+    
     ## testing
     
     test <- stat_tbls %>% 
-      map(function(x) x[, 1:2]) %>% 
-      reduce(full_join, 
-             by = names(stat_tbls[[1]])[1])
-    
-    test <- test[, 2:3] %>% 
-      map_dfc(function(x) ifelse(is.na(x), 0, x)) %>% 
+      map_dfc(~.x$n) %>% 
       chisq.test
     
     ## test summary
@@ -420,13 +418,13 @@
     ## for the factor features: counts and percents of cases in each strata are calculated
     ## for each cohort separately and their distributions compared with Chi2 test
 
-    if(class(inp_tbl[[variable]]) == 'numeric') {
+    if(is.numeric(inp_tbl[[variable]])) {
       
       return(analyze_numeric(inp_tbl = inp_tbl, 
                              variable = variable, 
                              split_var = split_var))
       
-    } else if(class(inp_tbl[[variable]]) == 'factor') {
+    } else if(is.factor(inp_tbl[[variable]])) {
       
       return(analyze_factor(inp_tbl = inp_tbl, 
                             variable = variable, 
@@ -479,10 +477,12 @@
     
     if(is.null(labeller)) {
       
+      split_levels <- names(plotting_tbl)
+      
       plotting_tbl <- plotting_tbl %>% 
         map2_dfr(., names(.), 
-                 function(x, y) mutate(x, split_var = y))
-      
+                 function(x, y) mutate(x, split_var = factor(y, levels = split_levels)))
+    
     } else {
       
       plotting_tbl <- plotting_tbl %>% 
@@ -753,7 +753,9 @@
                             y_lab = analysis_object$variable, 
                             x_lab = NULL, 
                             legend_title = NULL, 
-                            labeller = NULL, fill_colors = NULL, cust_theme = NULL, ...) {
+                            labeller = NULL, 
+                            fill_colors = NULL, 
+                            cust_theme = NULL, ...) {
     
     ## a mother wrapper for the plotting functions declared above
     ## fill colors may be provided as a single string with colors separated by commas
@@ -889,15 +891,19 @@
                                    n_complete), 
                              sep = '\n'))
       
+      strata_tbl <- desc_stats %>% 
+        map_dfc(~.x$tbl_cell) %>% 
+        as_tibble
+      
       tbl_record <- tibble(variable = analysis_object$variable, 
                            label = label, 
-                           class = analysis_object$var_class, 
-                           strata1 = desc_stats[[1]]$tbl_cell, 
-                           strata2 = desc_stats[[2]]$tbl_cell, 
-                           p_T = analysis_object$summary$p_value[1], 
-                           p_U = analysis_object$summary$p_value[2], 
-                           p_chi = NA)
-      
+                           class = analysis_object$var_class) %>% 
+        cbind(strata_tbl) %>% 
+        as_tibble %>% 
+        mutate( p_param = analysis_object$summary$p_value[1], 
+                p_non_param = analysis_object$summary$p_value[2], 
+                p_chi = NA)
+
     } else {
       
       desc_stats <- analysis_object$stat_tables %>% 
@@ -913,17 +919,21 @@
               paste(collapse = '\n') %>% 
               paste('\nncomplete =', x[[4]][1]))
       
+      strata_tbl <- desc_stats %>% 
+        as_tibble
+      
+      
       tbl_record <- tibble(variable = analysis_object$variable, 
                            label = label, 
-                           class = analysis_object$var_class, 
-                           strata1 = desc_stats[[1]], 
-                           strata2 = desc_stats[[2]], 
-                           p_T = NA, 
-                           p_U = NA, 
-                           p_chi = analysis_object$summary$p_value[1])
-      
+                           class = analysis_object$var_class) %>% 
+        cbind(strata_tbl) %>% 
+        as_tibble %>% 
+        mutate(p_param = NA, 
+               p_non_param = NA, 
+               p_chi = analysis_object$summary$p_value[1])
+
     }
-    
+
     return(tbl_record)
     
   }
